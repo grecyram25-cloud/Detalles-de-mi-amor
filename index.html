@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendario-GADSU</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        :root {
+            --color-principal: #ff6b81;
+            --color-secundario: #f1f2f6;
+            --color-bloqueado: #ced6e0;
+            --color-abierto: #ffeaa7; 
+            --texto-abierto: #d63031;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, rgb(159, 185, 255), #feca57);
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+
+        .calendario-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 15px;
+            max-width: 600px;
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        @media (max-width: 500px) {
+            .calendario-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+
+        .dia-box {
+            background-color: var(--color-secundario);
+            border-radius: 12px;
+            height: 90px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: var(--color-principal);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            position: relative;
+        }
+
+        .dia-box:hover {
+            transform: scale(1.05) translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+
+        .dia-box.abierto {
+            background-color: var(--color-abierto);
+            color: var(--texto-abierto);
+            border: 2px dashed #ff9f43;
+        }
+
+        .dia-box .corazon {
+            font-size: 0.9rem;
+            margin-top: 4px;
+            animation: latido 1.2s infinite;
+        }
+
+        .futuro {
+            background-color: var(--color-bloqueado);
+            color: #747d8c;
+            cursor: not-allowed;
+            opacity: 0.8;
+        }
+        
+        .futuro:hover {
+            transform: none;
+            animation: vibrar 0.3s linear;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.6);
+            backdrop-filter: blur(4px);
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+        }
+
+        .modal-contenido {
+            background: white;
+            padding: 25px;
+            border-radius: 20px;
+            max-width: 420px;
+            width: 85%;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+            animation: aparecer 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+
+        .modal-contenido p {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            color: #2d3436;
+            white-space: pre-line;
+        }
+
+        .modal-img {
+            max-width: 100%;
+            max-height: 220px;
+            border-radius: 10px;
+            margin-top: 15px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            object-fit: cover;
+        }
+
+        .btn-sorpresa {
+            display: inline-block;
+            background: linear-gradient(135deg, #00bec4, #00d2d3);
+            color: white;
+            text-decoration: none;
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-weight: bold;
+            margin-top: 15px;
+            box-shadow: 0 4px 10px rgba(0, 210, 211, 0.3);
+            transition: transform 0.2s;
+        }
+
+        .btn-sorpresa:hover {
+            transform: scale(1.05);
+        }
+
+        .cerrar-btn {
+            background-color: var(--color-principal);
+            border: none;
+            padding: 10px 22px;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 20px;
+            width: 100%;
+        }
+
+        /* --- ESTILOS EXTRAS PARA LA PREGUNTA CON CANDADO --- */
+        .seccion-candado {
+            background: #f7f9fa;
+            border: 2px solid #dfe4ea;
+            padding: 15px;
+            border-radius: 15px;
+            margin: 15px 0;
+        }
+        .input-candado {
+            width: 80%;
+            padding: 10px;
+            font-size: 1rem;
+            border: 2px solid #b2bec3;
+            border-radius: 8px;
+            text-align: center;
+            margin-top: 10px;
+            outline: none;
+        }
+        .input-candado:focus {
+            border-color: var(--color-principal);
+        }
+        .btn-candado {
+            background: var(--color-principal);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-weight: bold;
+            border-radius: 8px;
+            margin-top: 10px;
+            cursor: pointer;
+            width: 85%;
+        }
+        .txt-error {
+            color: #d63031;
+            font-size: 0.9rem;
+            margin-top: 8px;
+            font-weight: bold;
+            display: none;
+        }
+
+        @keyframes aparecer {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        @keyframes latido {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+        }
+
+        @keyframes vibrar {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-6px); }
+            40%, 80% { transform: translateX(6px); }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🎁¡BIENVENIDO, AL MEJOR MES DEL AÑO!🎁</h1>
+    <div id="countdown" style="color: white; font-weight: bold; font-size: 1.3rem; margin-bottom: 20px; text-shadow: 1px 1px 2px rgba(0,0,0,0.1);"></div>
+
+    <div class="calendario-grid" id="calendario"></div>
+
+    <div class="modal" id="miModal">
+        <div class="modal-contenido">
+            <h2 id="modal-titulo" style="color: var(--texto-abierto); margin-top: 0;"></h2>
+            
+            <div id="contenedor-candado"></div>
+
+            <div id="contenido-real-regalo">
+                <p id="modal-texto"></p>
+                <div id="contenedor-media"></div> 
+                <div id="contenedor-enlace"></div> 
+            </div>
+
+            <button class="cerrar-btn" onclick="cerrarModal()">Cerrar con Amor ❤️</button>
+        </div>
+    </div>
+
+    <script>
+        // --- CONFIGURACIÓN DE LOS REGALOS DIARIOS ---
+        const sorpresas = {
+            1: { 
+                texto: "¡Hola, corazón! Hoy empieza tu mes. Así que espero que disfrutes las sorpresas de cada día", 
+                link: "https://youtu.be/AHF4fwhkPDw?si=WTMtrtN_LZZ7Rjkv",
+                imagen: "https://i.postimg.cc/CLqJsGXP/1.jpg"
+            },
+            2: { 
+                texto: "Como segundo día, disfruta de este jueguito, armando las palabras de nuestro amor", 
+                link: "https://es.educaplay.com/recursos-educativos/29285684-aniversario_sopa_de_letras.html",
+                imagen: "https://media.tenor.com/owSXAc8yVpAAAAAi/milk-and-mocha-kiss-cheek.gif"
+            },
+            3: { 
+                texto: "No me gustan tus lamidas, pero no se que haré si un día me llegan a faltar", 
+                link: "",
+                imagen: "https://media.tenor.com/bSDfFZEc7m4AAAAi/myaowl-cute.gif"
+            },
+            4: { 
+                texto: "Que daría por tener más tiempo contigo aquella vez...¿Nos falto bailar más no crees?",
+                link: "https://youtu.be/kQKGI24aydk?si=0KlD9mo4Yyggs86D",
+                imagen: "https://i.postimg.cc/4dXNBQWb/4.jpg"
+            },
+            5: { 
+                texto: "Me hubiera encantado estar contigo el 24 y amanecer el 25. Pero es mejor tenerte los 365 días del año", 
+                link: "",
+                imagen: "https://i.postimg.cc/8zbYLdfZ/5.jpg"
+            },
+            6: { 
+                texto: "Esta vez, te toca elegir una pelicula, yo pongo la botana y dependiendo de tu gusto, te regalo de postre lo que pidas", 
+                link: "https://youtu.be/qSE7kUEDXrk?si=QEvTgERZz5iT6F51",
+                imagen: "https://i.postimg.cc/rwL61FnT/6.jpg"
+            },
+            7: { 
+                texto: " ¿Recuerdas el primer escalofrío al escucharla cantar?", 
+                link: "https://youtu.be/2iZxY6v7JYY?si=xThncNnEXaX9rUBV",
+                imagen: "https://i.postimg.cc/CK7VLT4V/7.jpg"
+            },
+            8: { 
+                texto: "Valido por un beso mientras te hago piojito", 
+                link: "",
+                imagen: "https://media.tenor.com/v-mocKYh9ygAAAAi/love-heart.gif"
+            },
+            9: { 
+                esCandado: true,
+                pregunta: "¿En qué fecha (día y mes) nos hicimos novios de manera oficial? (Ejemplo: 14 de febrero)",
+                respuestaCorrecta: "15 de Julio",
+                mensajesError: [
+                    "¡Nopo! Piensa bien mi amor... Echele ganitas",
+                    "¿A poco ya se te olvidó? ¿No que muy listo?",
+                    "Casi casi, ¡intenta otra vez! Te doy una pista: revisa tu memoria..."
+                ],
+                texto: "¡Felicidades! Abriste el candado secreto. Aquí tienes tu foto especial del día de hoy.", 
+                link: "",
+                imagen: "https://i.postimg.cc/RVm5fZbN/9.jpg"
+            },
+            10: { 
+                texto: "La Luna está hermosa hoy...(Tsuki ga kirei desu ne). Me pregunto si la vida que nos espera podra ser igual de bonita que está frase ", 
+                link: "",
+                imagen: "https://i.postimg.cc/vHY2bgN2/10.jpg"
+            },
+            11: { 
+                texto: "Hoy toca ponerte los audífonos y pensar en mí. Esta canción explica exactamente lo que creo del amor. Una vez dijiste que las canciones de ella, suenan a un amor muy dependiente, pero, ¿por qué eso tendría que ser malo, no crees que ese es el mejor estilo de amor?", 
+                link: "https://youtu.be/-e7wiyNO2us?si=L6t4s_td6LAUSCrV",
+                imagen: "https://i.postimg.cc/9QJhcHb4/11.jpg"
+            },
+            12: { 
+                texto: "Salidita a la feria, ese día fue el primer día que estuvimos  más tiempo juntos, para que recuerdes esa adrenalina, te prepare otro jueguito", 
+                link: "https://es.educaplay.com/recursos-educativos/29286315-gatito_trivia_felina.html",
+                imagen: "https://i.postimg.cc/yxPRLNm2/12.jpg"
+            },
+            13: { 
+                texto: "<<Más que besarnos, más que acostarnos juntos, más que ninguna otra cosa, él me daba la mano y eso era amor>>", 
+                link: "",
+                imagen: "https://i.postimg.cc/SsGjhvnY/13.jpg"
+            },
+            14: { 
+                texto: "Día número 14, y no podía faltar una carta de amor, esta vez con un toque más personal, espero que te guste mi amor", 
+                link: "https://drive.google.com/file/d/1VaAJ07ZU5_x7fwNKpPGtpldy7Narj0ZW/view?usp=sharing",
+                imagen: "https://i.postimg.cc/9FKtFg8y/Whats-App-Image-2026-05-26-at-7-53-45-PM.jpg"
+            },
+            15: { 
+                texto: "¡FELIZ ANIVERSARIO! Deseo de todo corazón que este día sea tan especial para ti como lo es para mí. Gracias por ser mi amigo y mi amor. ¡Te amo con todo mi corazón! (aunque parezca lo mismo, hay cositas nuevas, igual si quieres, puedes iniciar desde el principio)", 
+                link: "https://drive.google.com/file/d/13yLnjgwja2vgO_aLENe4Dr7IjN_RxE_D/view?usp=sharing", 
+                imagen: "https://i.postimg.cc/j5k0PHmS/15.jpg"
+            },
+            16: {  
+                esCandado: true,
+                pregunta: "¿Cómo se llamaba el lugar dondé me compraste ropa? (Ejemplo: Sears)",
+                respuestaCorrecta: "Sasha",
+                mensajesError: [
+                    "¡Nopo! Piensa bien mi amor... Echele ganitas",
+                    "¿A poco ya se te olvidó? ¿No que muy listo?",
+                    "Casi casi, ¡intenta otra vez! Te doy una pista: revisa tu memoria..."
+                ],
+                texto: "¡Felicidades! Abriste el candado secreto. Aquí tienes tu foto especial del día de hoy.", 
+                link: "",
+                imagen: "https://i.postimg.cc/BvKMMxj3/16.jpg"
+            },
+            17: { 
+                texto: "Valido por una ronda de preguntas nocturnas", 
+                link: "",
+                imagen: "https://media.tenor.com/v-mocKYh9ygAAAAi/love-heart.gif"
+            },
+            18: { 
+                texto: "Intensamente...Romántico. Y como un cupón no es suficiente para expresar lo que quiero regalarte hoy, te dejo este paquetito, espero que te guste", 
+                link: "https://drive.google.com/file/d/1PliVQAE_2YPId-CDIb3rOO7H-syuKYqW/view?usp=sharing",
+                imagen: "https://i.postimg.cc/MZymc6B8/18.jpg"
+            },
+            19: { 
+                texto: "Es tiempo de volver a divertirnos amor, agiliza tu memoria y suerte", 
+                link: "https://es.educaplay.com/recursos-educativos/29286686-aniversario_memoria_de_momentos.html",
+                imagen: "https://media.tenor.com/1yMk3DxkhToAAAAi/play-fight.gif"
+            },
+            20: { 
+                texto: "Valido por un escrito con la temática que elijas", 
+                link: "",
+                imagen: "https://media.tenor.com/v-mocKYh9ygAAAAi/love-heart.gif"
+            },
+            21: { 
+                texto: "Y volvemos a la parte romántica, esta vez con un poema que escribí para ti, espero que te guste mi amor", 
+                link: "https://drive.google.com/file/d/17cxUMN6okyFkv_EY4ZqrCXRNjT1e3CUk/view?usp=sharing",
+                imagen: "https://i.postimg.cc/pXwzthrk/21.jpg"
+            },
+            22: { 
+                texto: "Ahora, ¿qué tal si hablamos un poco? Me gustaría saber, ¿cuál consideras que es tu película favorita de las que hemos visto juntos? En lo personal, diría que la mía es la de Intensamente 2, (obviamente no cuenta este año), pero me encantaría saber tu opinión, así que te dejo un espacio para que me cuentes",
+                link: "",
+                imagen: "https://i.postimg.cc/bvDFW7F4/22.jpg"
+            },
+            23: { 
+                esCandado: true,
+                pregunta: "¿Qué es lo que más disfruto de hacerlo? (Ejemplo: Besarnos, abrazarnos, etc.)",
+                respuestaCorrecta: "Abrazarnos",
+                mensajesError: [
+                    "¡Nopo! Piensa bien mi amor... Echele ganitas",
+                    "¿A poco ya se te olvidó? ¿No que muy listo?",
+                    "Casi casi, ¡intenta otra vez! Te doy una pista: revisa tu memoria..."
+                ],
+                texto: "¡Felicidades! Abriste el candado secreto. Aquí tienes tu foto especial del día de hoy.", 
+                link: "",
+                imagen: "https://i.postimg.cc/DwhJ41Bj/23.jpg"
+            },
+            24: { 
+                texto: "<<Sus labios eran una caricia necesaria, cómo podía haber vivido hasta ahora sin ellos>>", 
+                link: "",
+                imagen: "https://i.postimg.cc/9M9tYVN4/24.jpg"
+            },
+            25: { 
+                texto: "«Te quiero como para escuchar tu risa toda la noche y dormir en tu pecho, sin sombras ni fantasmas»", 
+                link: "",
+                imagen: "https://i.postimg.cc/RZ07bwb8/25.jpg"
+            },
+            26: { 
+                texto: "Hoy es un día para reflexionar, sobre esa noche, después de tiempo y aunque creo que ya lo sabes, esa vez no estaba muy segura de ir, pero después de todo, me encanto ver como lo pase contigo, diría que fue una noche muy especial para mí, te lo agradezco mucho, por haberlo intentado conmigo.", 
+                link: "",
+                imagen: "https://i.postimg.cc/bNwSzpHN/26.jpg"
+            },
+            27: { 
+                texto: "Creo que lo mejor de pasar tiempo contigo es que no importa que estemos haciendo siempre me va a gustar pasar tiempo contigo, mis momentos favoritos siempre serán estando en el sofá, hemos pasado muchísimas cosas ahí, ¿no lo creés?", 
+                link: "",
+                imagen: "https://media.tenor.com/pojEG6GlQXoAAAAi/milk-mocha.gif"
+            },
+            28: { 
+                esCandado: true,
+                pregunta: "¿Cuál es mi comida favorita? (Ejemplo: china, chilaquiles, enchiladas.)",
+                respuestaCorrecta: "Todas las anteriores jaja",
+                mensajesError: [
+                    "¡Nopo! Piensa bien mi amor... Echele ganitas",
+                    "¿A poco ya se te olvidó? ¿No que muy listo?",
+                    "Casi casi, ¡intenta otra vez! Te doy una pista: revisa tu memoria..."
+                ],
+                texto: "¡Felicidades! Abriste el candado secreto. Aquí tienes tu foto especial del día de hoy.", 
+                link: "",
+                imagen: "https://i.postimg.cc/pdFq76dg/28.jpg"
+            },
+            29: { 
+                texto: "Cupón para tener una noche linda", 
+                link: "",
+                imagen: "https://media1.tenor.com/m/zWQ3VS_Tf_EAAAAC/vday-be-my-valentine.gif"
+            },
+            30: { 
+                texto: " ¡FELIZ CUMPLEAÑOS CARITA DE BOLA! ¿Listo, para ver a unos de tus super héroes en pantalla? (iremos a verlo al cine)", 
+                link: "https://youtu.be/tLCl8xARfUE?si=tGSlDSPr-lIRi7qI",
+                imagen: "https://media1.tenor.com/m/8LbDJSWGQy4AAAAC/gwen-stacy-gwen.gif"
+            },
+            31: { 
+                texto: "Bueno amor, finalmente llegamos al último día de este calendario, espero que hayas disfrutado cada sorpresa, cada detalle, cada palabra, cada imagen, cada canción... Espero que te haya gustado tanto como a mí me gustó prepararlo para ti. Te amo con todo mi corazón y deseo que este mes haya sido tan especial para ti como lo es para mí. ¡FELICES 22 AÑOTES MI AMOR! 🎂🎈", 
+                link: "https://youtu.be/qlpKgQI6KNk?si=5NOgl3sPdxZDVsmo",
+                imagen: "https://i.postimg.cc/4NvK8bZL/31-0.jpg"
+            }
+        };
+
+        const añoActual = 2026; 
+        const mesJulio = 6; // Julio es el mes 6 en JavaScript (Enero es 0)
+
+        const contenedor = document.getElementById('calendario');
+        const hoy = new Date(); 
+
+        let diasAbiertos = JSON.parse(localStorage.getItem('calendarioNovioAbiertos')) || [];
+
+        // Genera los 31 días correspondientes a Julio
+        for (let dia = 1; dia <= 31; dia++) {
+            const box = document.createElement('div');
+            box.classList.add('dia-box');
+            
+            if (diasAbiertos.includes(dia)) {
+                box.classList.add('abierto');
+                box.innerHTML = `${dia} <span class="corazon">❤️</span>`;
+            } else {
+                box.innerText = dia;
+            }
+
+            const fechaDia = new Date(añoActual, mesJulio, dia);
+
+            // Verificación de fecha real para bloquear días futuros
+            if (hoy >= fechaDia) {
+                box.addEventListener('click', () => abrirRegalo(dia, box));
+            } else {
+                box.classList.add('futuro');
+                box.addEventListener('click', () => {
+                    alert(`¡Ora! ¿No sabes leer? Aún no estamos a ese día, jaja, te amo... Vuelve el ${dia} de Julio para ver la siguiente sorpresa.`);
+                });
+            }
+
+            contenedor.appendChild(box);
+        }
+
+        const modal = document.getElementById('miModal');
+        const mTitulo = document.getElementById('modal-titulo');
+        const mTexto = document.getElementById('modal-texto');
+        const cMedia = document.getElementById('contenedor-media');
+        const cEnlace = document.getElementById('contenedor-enlace');
+        const cCandado = document.getElementById('contenedor-candado');
+        const bloqueContenidoReal = document.getElementById('contenido-real-regalo');
+
+        function abrirRegalo(dia, elementoBox) {
+            mTitulo.innerText = `Regalo del Día ${dia} ✨`;
+            
+            const contenido = sorpresas[dia] || { texto: "Sorpresa de prueba: ¡Te amo infinito! 💖", link: "", imagen: "" };
+            
+            // Limpiar todo el contenido anterior del modal
+            cMedia.innerHTML = "";
+            cEnlace.innerHTML = "";
+            cCandado.innerHTML = "";
+            bloqueContenidoReal.style.display = "block";
+
+            // --- LÓGICA ESPECIAL PARA EL DÍA CON CANDADO (SIEMPRE SE CIERRAN) ---
+            if (contenido.esCandado) {
+                // Ocultar el regalo real hasta que responda bien CADA VEZ que abra
+                bloqueContenidoReal.style.display = "none";
+                mTitulo.innerText = `Día ${dia}:🔒 Candado Secreto`;
+
+                // Crear interfaz del candado dentro del modal
+                cCandado.innerHTML = `
+                    <div class="seccion-candado">
+                        <p style="font-size: 2.2rem; margin: 5px 0;">🔒</p>
+                        <p style="font-weight: bold; color: #2d3436;">Este día tiene un cerrojo especial. Para abrirlo, responde:</p>
+                        <p style="font-style: italic; color: #57606f;">"${contenido.pregunta}"</p>
+                        <input type="text" id="rta-candado" class="input-candado" placeholder="Escribe aquí tu respuesta...">
+                        <div id="error-candado" class="txt-error"></div>
+                        <button class="btn-candado" id="btn-probar-candado">Desbloquear Candado 🔑</button>
+                    </div>
+                `;
+
+                // Añadir evento al botón del candado
+                document.getElementById('btn-probar-candado').addEventListener('click', () => {
+                    const entradaUser = document.getElementById('rta-candado').value.trim().toLowerCase();
+                    const errorDiv = document.getElementById('error-candado');
+
+                    if (entradaUser === contenido.respuestaCorrecta.toLowerCase()) {
+                        lanzarCorazones();
+                        
+                        cCandado.innerHTML = "";
+                        mTitulo.innerText = `Regalo del Día ${dia} ✨`;
+                        bloqueContenidoReal.style.display = "block";
+                        
+                        mostrarInformacionRegalo(dia, contenido, elementoBox);
+                    } else {
+                        const randomMsg = contenido.mensajesError[Math.floor(Math.random() * contenido.mensajesError.length)];
+                        errorDiv.innerText = randomMsg;
+                        errorDiv.style.display = "block";
+                        
+                        const seccion = document.querySelector('.seccion-candado');
+                        seccion.style.animation = 'vibrar 0.3s linear';
+                        setTimeout(() => seccion.style.animation = '', 300);
+                    }
+                });
+
+                modal.style.display = 'flex';
+                return; // Pausar aquí, no continúa al flujo normal hasta que acierte
+            }
+
+            // Si no es candado, se muestra directo:
+            mostrarInformacionRegalo(dia, contenido, elementoBox);
+            modal.style.display = 'flex';
+        }
+
+        // Función que rellena el regalo
+        function mostrarInformacionRegalo(dia, contenido, elementoBox) {
+            mTexto.innerText = contenido.texto;
+
+            if (contenido.imagen && contenido.imagen.trim() !== "") {
+                const imgTag = document.createElement('img');
+                imgTag.src = contenido.imagen;
+                imgTag.classList.add('modal-img');
+                cMedia.appendChild(imgTag);
+            }
+
+            if (contenido.link && contenido.link.trim() !== "") {
+                const botonLink = document.createElement('a');
+                botonLink.href = contenido.link;
+                botonLink.target = "_blank"; 
+                botonLink.classList.add('btn-sorpresa');
+                
+                if (contenido.link.includes("drive.google.com")) {
+                    botonLink.innerText = "✉️ ES MOMENTO DE LEER";
+                } else if (contenido.link.includes("youtube.com") || contenido.link.includes("youtu.be")) {
+                    botonLink.innerText = "🎵 TIEMPO DE RELAJARTE";
+                } else if (contenido.link.includes("educaplay.com")) {
+                    botonLink.innerText = "🧩 HORA DE JUGAR";
+                } else {
+                    botonLink.innerText = "VER SORPRESA 🚀";
+                }
+                
+                cEnlace.appendChild(botonLink);
+            }
+
+            // Cambiar caja a estado Abierto (Dorado), guardarlo y ¡NOTIFICARTE!
+            if (!elementoBox.classList.contains('abierto')) {
+                elementoBox.classList.add('abierto');
+                elementoBox.innerHTML = `${dia} <span class="corazon">❤️</span>`;
+                
+                diasAbiertos.push(dia);
+                localStorage.setItem('calendarioNovioAbiertos', JSON.stringify(diasAbiertos));
+
+                // Aquí mandamos tu notificación silenciosa
+                notificarApertura(dia);
+            }
+        }
+
+        function cerrarModal() {
+            modal.style.display = 'none';
+        }
+
+        function lanzarCorazones() {
+            const duration = 2 * 1000;
+            const end = Date.now() + duration;
+
+            (function frame() {
+                confetti({
+                    particleCount: 3,
+                    angle: 60,
+                    spread: 55,
+                    origin: { x: 0 },
+                    colors: ['#ff6b81', '#ff4757', '#ff7f50']
+                });
+                confetti({
+                    particleCount: 3,
+                    angle: 120,
+                    spread: 55,
+                    origin: { x: 1 },
+                    colors: ['#ff6b81', '#ff4757', '#ff7f50']
+                });
+
+                if (Date.now() < end) {
+                    requestAnimationFrame(frame);
+                }
+            }());
+        }
+
+        const cumple = new Date(añoActual, 6, 30); // Julio es el mes 6
+        const dif = cumple - hoy;
+        if (dif > 0) {
+            const diasFaltantes = Math.ceil(dif / (1000 * 60 * 60 * 24));
+            document.getElementById('countdown').innerText = `Faltan ${diasFaltantes} días para tu gran día ✨`;
+        } else {
+            document.getElementById('countdown').innerText = `¡MUCHAS FELICIDADES MI AMOR, FELICES 22 AÑOTES! 🎂🎈`;
+        }
+    </script>
+</body>
+</html>
